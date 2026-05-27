@@ -62,7 +62,7 @@ def depressions_to_grass(deps, labels, flowdirs, map_name, overwrite=False):
       - Metadepressions: point at out_cell (the saddle between child depressions).
     Layer 2 (ocean_links table): one row per ocean_linked entry.
     """
-    from raster import rdarray_to_grass
+    from librichdem.raster import rdarray_to_grass
 
     OCEAN_val = int(OCEAN)
     region = gs.region()

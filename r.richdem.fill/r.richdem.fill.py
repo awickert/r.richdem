@@ -37,7 +37,7 @@ def main():
     if path is None:
         gs.fatal("librichdem not found. Is r.richdem fully installed?")
     sys.path.insert(0, path)
-    from raster import rdarray_from_grass, rdarray_to_grass
+    from librichdem.raster import rdarray_from_grass, rdarray_to_grass
 
     import richdem as rd
 
