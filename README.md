@@ -145,6 +145,11 @@ in depressions and morphological segmentations.
 *Earth Surface Dynamics* 8(2), 431–445.
 DOI: [10.5194/esurf-8-431-2020](https://doi.org/10.5194/esurf-8-431-2020)
 
+Lindsay, J.B. (2016).
+Efficient hybrid breaching-filling sink removal methods for flow path enforcement in digital elevation models.
+*Hydrological Processes* 30(6), 846–857.
+DOI: [10.1002/hyp.10648](https://doi.org/10.1002/hyp.10648)
+
 Barnes, R. (2016). RichDEM: Terrain Analysis Software.
 [http://github.com/r-barnes/richdem](http://github.com/r-barnes/richdem)
 

@@ -70,6 +70,20 @@ references:
     end: 445
     year: 2020
     doi: 10.5194/esurf-8-431-2020
+  - type: article
+    title: >
+      Efficient hybrid breaching-filling sink removal methods for flow path
+      enforcement in digital elevation models
+    authors:
+      - family-names: "Lindsay"
+        given-names: "John B."
+    journal: "Hydrological Processes"
+    volume: 30
+    issue: 6
+    start: 846
+    end: 857
+    year: 2016
+    doi: 10.1002/hyp.10648
   - type: software
     title: "RichDEM: Terrain Analysis Software"
     authors:

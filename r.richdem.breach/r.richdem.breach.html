@@ -56,10 +56,11 @@
 
 <em><b>r.richdem.breach</b></em> removes topographic depressions from a digital
 elevation model (DEM) by carving a channel from each pit cell to the nearest
-outlet at the lowest possible elevation. Unlike depression filling, which raises
-pit cells to the pour-point elevation, breaching lowers the channel cells along
-the shortest path from the pit to a drainage outlet, thereby preserving the
-surrounding terrain.
+outlet at the lowest possible elevation, following the complete-breaching
+algorithm of Lindsay (2016). Unlike depression filling, which raises pit cells
+to the pour-point elevation, breaching lowers the channel cells along the
+Priority-Flood least-cost path from the pit to a drainage outlet, thereby
+preserving the surrounding terrain.
 
 <p>
 Breaching is often preferable to filling when:
@@ -118,6 +119,12 @@ r.mapcalc "diff = dem_filled - dem_breached"
 <h2>REFERENCES</h2>
 
 <ul>
+<li>Lindsay, J.B. (2016).
+Efficient hybrid breaching-filling sink removal methods for flow path
+enforcement in digital elevation models.
+<em>Hydrological Processes</em> Vol 30(6), pp 846–857.
+DOI: <a href="https://doi.org/10.1002/hyp.10648">10.1002/hyp.10648</a>
+</li>
 <li>Barnes, R. (2016). RichDEM: Terrain Analysis Software.
 URL: <a href="http://github.com/r-barnes/richdem">http://github.com/r-barnes/richdem</a>
 </li>
@@ -136,7 +143,8 @@ URL: <a href="http://github.com/r-barnes/richdem">http://github.com/r-barnes/ric
 
 <h2>AUTHORS</h2>
 
-Richard Barnes (RichDEM library)
+John B. Lindsay (algorithm, Lindsay 2016);
+Richard Barnes (RichDEM implementation)
 
 <p>
 GRASS GIS bindings: Andrew D. Wickert, with assistance from Claude Sonnet 4.6</p>
