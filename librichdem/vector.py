@@ -1,20 +1,141 @@
 """Conversion between GRASS vector maps and RichDEM depression hierarchy objects."""
 
+import math
+import os
 import sqlite3
-import numpy as np
 import grass.script as gs
-from richdem.depression_hierarchy import Depression, OCEAN, NO_DEP
+from grass.pygrass.vector import VectorTopo
+from grass.pygrass.vector.geometry import Point
+from richdem.depression_hierarchy import Depression, OCEAN
+
+# std::numeric_limits<uint32_t>::max() — used as NO_VALUE / NO_PARENT sentinel
+_NO_VALUE = 2**32 - 1
+
+_SCHEMA_COLS = (
+    "type VARCHAR(4), "
+    "pit_cell INTEGER, out_cell INTEGER, "
+    "parent INTEGER, odep INTEGER, lchild INTEGER, rchild INTEGER, geolink INTEGER, "
+    "pit_elev DOUBLE PRECISION, out_elev DOUBLE PRECISION, "
+    "ocean_parent INTEGER, cell_count INTEGER, "
+    "dep_vol DOUBLE PRECISION, water_vol DOUBLE PRECISION, total_elevation DOUBLE PRECISION"
+)
+
+# Ordered list of the 15 data columns (excluding cat and dep_label)
+_DATA_COLS = [c.split()[0] for c in _SCHEMA_COLS.split(",")]
+
+
+def _flat_to_xy(flat_idx, region):
+    row, col = divmod(int(flat_idx), int(region["cols"]))
+    x = region["w"] + (col + 0.5) * region["ewres"]
+    y = region["n"] - (row + 0.5) * region["nsres"]
+    return x, y
+
+
+def _null_int(val):
+    v = int(val)
+    return None if v == _NO_VALUE else v
+
+
+def _null_float(val):
+    f = float(val)
+    return None if math.isinf(f) or math.isnan(f) else f
+
+
+def _dep_row(dep):
+    """Return the 15 data-column values for a Depression, in _DATA_COLS order."""
+    return (
+        "leaf" if int(dep.lchild) == _NO_VALUE else "meta",
+        int(dep.pit_cell), int(dep.out_cell),
+        _null_int(dep.parent), _null_int(dep.odep),
+        _null_int(dep.lchild), _null_int(dep.rchild), _null_int(dep.geolink),
+        _null_float(dep.pit_elev), _null_float(dep.out_elev),
+        int(dep.ocean_parent), int(dep.cell_count),
+        float(dep.dep_vol), float(dep.water_vol), float(dep.total_elevation),
+    )
 
 
 def depressions_to_grass(deps, labels, flowdirs, map_name, overwrite=False):
     """Write a RichDEM depression hierarchy to a GRASS vector map.
 
     Layer 1 (depressions table): one feature per depression.
-      - Leaf depressions: area polygon (from labels raster) + centroid at pit_cell.
-      - Metadepressions: point at out_cell.
+      - Leaf depressions: area polygon (from labels raster) + centroid inside area.
+      - Metadepressions: point at out_cell (the saddle between child depressions).
     Layer 2 (ocean_links table): one row per ocean_linked entry.
     """
-    raise NotImplementedError("depressions_to_grass not yet implemented")
+    from raster import rdarray_to_grass
+
+    OCEAN_val = int(OCEAN)
+    region = gs.region()
+
+    # --- Step 1: labels raster → leaf depression areas ---
+    tmp = f"tmp_rdlabels_{os.getpid()}"
+    rdarray_to_grass(labels, tmp, overwrite=True)
+    # Null OCEAN cells so r.to.vect only creates areas for actual depressions
+    gs.run_command("r.null", map=tmp, setnull=str(OCEAN_val), quiet=True)
+    gs.run_command(
+        "r.to.vect",
+        input=tmp, output=map_name, type="area",
+        column="dep_label", flags="s", overwrite=overwrite, quiet=True,
+    )
+    gs.run_command("g.remove", type="raster", name=tmp, flags="f", quiet=True)
+
+    # --- Step 2: metadepression points at out_cell ---
+    # cat is set to dep_label so we can INSERT matching rows by cat later.
+    with VectorTopo(map_name, mode="rw") as vmap:
+        for dep in deps:
+            if int(dep.lchild) != _NO_VALUE:
+                x, y = _flat_to_xy(dep.out_cell, region)
+                vmap.write(Point(x, y), cat=dep.dep_label, layer=1)
+
+    # --- Step 3: add schema columns ---
+    gs.run_command(
+        "v.db.addcolumn", map=map_name, columns=_SCHEMA_COLS, quiet=True,
+    )
+
+    # --- Step 4: populate attribute table ---
+    db_info = gs.vector_db(map=map_name)
+    db_path = db_info[1]["database"]
+    tbl = db_info[1]["table"]
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+
+    set_clause = ", ".join(f"{c}=?" for c in _DATA_COLS)
+    insert_cols = f"cat, dep_label, {', '.join(_DATA_COLS)}"
+    insert_placeholders = ", ".join(["?"] * (2 + len(_DATA_COLS)))
+
+    for dep in deps:
+        if dep.dep_label == OCEAN_val:
+            continue
+        row = _dep_row(dep)
+        if int(dep.lchild) == _NO_VALUE:
+            # Leaf: row exists from r.to.vect, update by dep_label
+            cur.execute(
+                f"UPDATE {tbl} SET {set_clause} WHERE dep_label=?",
+                row + (dep.dep_label,),
+            )
+        else:
+            # Meta: row must be inserted; cat matches what VectorTopo wrote
+            cur.execute(
+                f"INSERT INTO {tbl} ({insert_cols}) VALUES ({insert_placeholders})",
+                (dep.dep_label, dep.dep_label) + row,
+            )
+
+    # --- Step 5: ocean_links junction table as layer 2 ---
+    cur.execute(
+        "CREATE TABLE ocean_links "
+        "(cat INTEGER PRIMARY KEY, dep_label INTEGER, linked_label INTEGER)"
+    )
+    cur.executemany(
+        "INSERT INTO ocean_links (dep_label, linked_label) VALUES (?, ?)",
+        [(dep.dep_label, lnk) for dep in deps for lnk in dep.ocean_linked],
+    )
+    conn.commit()
+    conn.close()
+
+    gs.run_command(
+        "v.db.connect", map=map_name, table="ocean_links",
+        layer=2, key="cat", quiet=True,
+    )
 
 
 def depressions_from_grass(map_name):
@@ -24,14 +145,15 @@ def depressions_from_grass(map_name):
         gs.fatal(f"Vector map {map_name} has no layer 1 attribute table.")
 
     db_path = db_info[1]["database"]
+    tbl = db_info[1]["table"]
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
-    cur.execute("""
+    cur.execute(f"""
         SELECT dep_label, pit_cell, out_cell, parent, odep, lchild, rchild,
                geolink, pit_elev, out_elev, ocean_parent, cell_count,
                dep_vol, water_vol, total_elevation
-        FROM depressions
+        FROM {tbl}
         ORDER BY dep_label
     """)
     rows = cur.fetchall()
@@ -44,6 +166,14 @@ def depressions_from_grass(map_name):
 
     conn.close()
 
+    def restore_int(val):
+        """NULL in SQLite means NO_VALUE sentinel for uint32 fields."""
+        return _NO_VALUE if val is None else int(val)
+
+    def restore_float(val):
+        """NULL in SQLite means infinity for unset elevation fields."""
+        return float("inf") if val is None else float(val)
+
     deps = []
     for row in rows:
         (dep_label, pit_cell, out_cell, parent, odep, lchild, rchild,
@@ -51,21 +181,21 @@ def depressions_from_grass(map_name):
          dep_vol, water_vol, total_elevation) = row
 
         d = Depression()
-        d.dep_label       = dep_label
-        d.pit_cell        = pit_cell
-        d.out_cell        = out_cell
-        d.parent          = parent
-        d.odep            = odep
-        d.lchild          = lchild
-        d.rchild          = rchild
-        d.geolink         = geolink
-        d.pit_elev        = pit_elev
-        d.out_elev        = out_elev
+        d.dep_label       = int(dep_label)
+        d.pit_cell        = int(pit_cell)
+        d.out_cell        = int(out_cell)
+        d.parent          = restore_int(parent)
+        d.odep            = restore_int(odep)
+        d.lchild          = restore_int(lchild)
+        d.rchild          = restore_int(rchild)
+        d.geolink         = restore_int(geolink)
+        d.pit_elev        = restore_float(pit_elev)
+        d.out_elev        = restore_float(out_elev)
         d.ocean_parent    = bool(ocean_parent)
-        d.cell_count      = cell_count
-        d.dep_vol         = dep_vol
-        d.water_vol       = water_vol
-        d.total_elevation = total_elevation
+        d.cell_count      = int(cell_count)
+        d.dep_vol         = float(dep_vol)
+        d.water_vol       = float(water_vol)
+        d.total_elevation = float(total_elevation)
         d.ocean_linked    = ocean_linked.get(dep_label, [])
         deps.append(d)
 
@@ -76,11 +206,12 @@ def update_water_vol(deps, map_name):
     """Write updated water_vol values from Depression list back to the vector map."""
     db_info = gs.vector_db(map=map_name)
     db_path = db_info[1]["database"]
+    tbl = db_info[1]["table"]
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
 
     cur.executemany(
-        "UPDATE depressions SET water_vol = ? WHERE dep_label = ?",
+        f"UPDATE {tbl} SET water_vol = ? WHERE dep_label = ?",
         [(d.water_vol, d.dep_label) for d in deps],
     )
     conn.commit()
