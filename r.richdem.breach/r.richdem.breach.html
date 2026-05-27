@@ -56,46 +56,86 @@
 
 <em><b>r.richdem.breach</b></em> removes topographic depressions from a digital
 elevation model (DEM) by carving a channel from each pit cell to the nearest
-outlet at the lowest possible elevation, following the complete-breaching
-algorithm of Lindsay (2016). Unlike depression filling, which raises pit cells
-to the pour-point elevation, breaching lowers the channel cells along the
-Priority-Flood least-cost path from the pit to a drainage outlet, thereby
-preserving the surrounding terrain.
+drainage outlet, following the complete-breaching mode of the priority-flood
+algorithm of Lindsay (2016) as implemented in RichDEM by Richard Barnes.
+Unlike depression filling, which raises interior cells to the pour-point
+elevation, breaching lowers the cells along the breach channel, leaving the
+surrounding terrain unmodified.
+
+<h3>Algorithm</h3>
+
+The algorithm proceeds in three phases:
+
+<ol>
+  <li><b>Initialization.</b> Each pit cell is <em>shallowed</em>: its elevation
+      is raised to just below that of its lowest neighbor. This removes
+      isolated single-cell pits cheaply and reduces the depth and length of
+      breach channels required for larger depressions, thereby limiting the
+      algorithm's impact on the DEM.</li>
+
+  <li><b>Priority-flood traversal.</b> DEM edge cells are inserted into a
+      min-heap priority queue. The priority of each cell combines its elevation
+      and insertion order, which correctly handles flat areas without a
+      separate preprocessing step. Cells are removed from the queue in
+      priority order; their unvisited neighbors are added, and a back-link is
+      recorded for each newly encountered cell. When a pit cell is dequeued,
+      the back-link chain is traced downslope to find the path to the nearest
+      cell that is lower or on the DEM edge. Elevations along that path are
+      lowered to form a monotonically descending breach channel.</li>
+
+  <li><b>Output.</b> In complete-breaching mode all depressions are resolved
+      by breaching. (Lindsay (2016) also describes selective and
+      constrained hybrid modes that fall back to filling for depressions
+      whose breach channel would exceed specified depth or length thresholds;
+      those modes are not exposed by this module.)</li>
+</ol>
+
+Complete-breaching processes DEMs in approximately 87% of the time required
+by an equivalent depression-filling algorithm (Lindsay, 2016).
+
+<h3>When to breach versus fill</h3>
+
+Breaching is preferred for high-relief landscapes dominated by fluvial
+processes, where most depressions are artifacts (erroneous damming along
+convergent topography from grid resolution or InSAR noise). It reinforces
+natural drainage pathways and modifies fewer cells than filling.
 
 <p>
-Breaching is often preferable to filling when:
+Filling is preferable for:
 <ul>
-  <li>Depressions are small relative to surrounding terrain (narrow channels are
-      more realistic than broad flat-bottomed basins).</li>
-  <li>Preserving the original elevation of non-channel cells is important for
-      subsequent terrain analysis.</li>
-  <li>Filling would create large artificial flats that complicate flow-direction
-      assignment.</li>
+  <li>Very deep real depressions — lakes, wetlands, sinkholes, open-pit
+      mines — where a breach channel would be unrealistically long and
+      deeply incised.</li>
+  <li>Landscapes where the modelling goal is topographic depression mapping
+      rather than surface flow routing.</li>
 </ul>
 
 <p>
-Two flow topologies are supported:
+For landscapes that genuinely contain both artifact and real depressions,
+consider the Fill–Spill–Merge workflow
+(<em><a href="r.richdem.dephier.html">r.richdem.dephier</a></em> +
+<em><a href="r.richdem.fsm.html">r.richdem.fsm</a></em>), which retains real
+depressions and routes water through them explicitly.
+
+<h3>Flow topology</h3>
+
 <ul>
-  <li><b>D8</b> (default) — channel paths connect cells through any of the 8
-      neighbors.</li>
-  <li><b>D4</b> — channel paths connect cells through the 4 cardinal
-      neighbors only.</li>
+  <li><b>D8</b> (default) — breach channels connect cells through any of the
+      8 neighbors (including diagonals).</li>
+  <li><b>D4</b> — breach channels connect cells through the 4 cardinal
+      neighbors only, producing orthogonal channel paths.</li>
 </ul>
 
 <h2>NOTES</h2>
 
-Breaching and filling are complementary approaches to hydrological conditioning.
-For many real-world landscapes both types of depressions exist: some depressions
-are artifacts that should be removed (filled or breached), while others are
-genuine features such as lakes and wetlands. To model water redistribution
-through real depressions rather than removing them, use
-<em><a href="r.richdem.dephier.html">r.richdem.dephier</a></em> together with
-<em><a href="r.richdem.fsm.html">r.richdem.fsm</a></em>.
-
-<p>
-After breaching, flat areas may remain at the carved channel elevations.
-<em><a href="r.richdem.resolveflats.html">r.richdem.resolveflats</a></em> can
-impose a small drainage gradient on any remaining flat areas.
+The priority metric used during traversal combines cell elevation and
+insertion order using fixed-precision concatenation. This ensures correct
+handling of flat areas — no separate flat-resolution step is needed after
+breaching, unlike after
+<em><a href="r.richdem.fill.html">r.richdem.fill</a></em> (without the
+<b>-e</b> flag). If flat areas do persist, apply
+<em><a href="r.richdem.resolveflats.html">r.richdem.resolveflats</a></em>
+before computing flow directions or accumulation.
 
 <h2>EXAMPLES</h2>
 
