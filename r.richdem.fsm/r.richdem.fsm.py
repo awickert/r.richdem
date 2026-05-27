@@ -46,13 +46,21 @@ def main():
     from librichdem.raster import rdarray_from_grass, rdarray_to_grass
     from librichdem.vector import depressions_from_grass, update_water_vol
 
+    import numpy as np
     import richdem as rd
 
-    dem      = rdarray_from_grass(options["input"])
-    labels   = rdarray_from_grass(options["labels"])
-    flowdirs = rdarray_from_grass(options["flowdirs"])
-    wtd      = rdarray_from_grass(options["water_depth"])
-    deps     = depressions_from_grass(options["hierarchy"])
+    dem  = rdarray_from_grass(options["input"])
+    wtd  = rdarray_from_grass(options["water_depth"])
+    deps = depressions_from_grass(options["hierarchy"])
+
+    # FSM requires labels as uint32 and flowdirs as int8; GRASS stores both
+    # as DCELL (float64), so we cast after reading.
+    _labels_f   = rdarray_from_grass(options["labels"])
+    _flowdirs_f = rdarray_from_grass(options["flowdirs"])
+    labels   = rd.rdarray(np.array(_labels_f,   dtype=np.uint32), no_data=2**32-1,
+                          geotransform=_labels_f.geotransform)
+    flowdirs = rd.rdarray(np.array(_flowdirs_f, dtype=np.int8),   no_data=-1,
+                          geotransform=_flowdirs_f.geotransform)
 
     rd.fill_spill_merge(dem, labels, flowdirs, deps, wtd)
 
