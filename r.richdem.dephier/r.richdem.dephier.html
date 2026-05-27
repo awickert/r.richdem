@@ -87,6 +87,24 @@ depression (leaf or meta), and the two children of any meta-depression are the
 two depressions that merged to form it. Separately, ocean links record
 depressions that drain directly to the ocean rather than to another depression.
 
+<p>
+<img src="esurf-9-105-2021-f02.png" alt="Conceptual diagram of depression hierarchy terminology: binary tree, cross-sections of nested depressions, and volume diagram" style="max-width:100%">
+<br>
+<small>Depression hierarchy terminology. (a) Binary tree relating leaf and meta depressions.
+(b&ndash;d) Cross-sections illustrating nested leaf, marginal, and meta depressions.
+(e) Volume&ndash;elevation relationship with Parent, Leaf, and Spillover components.
+Figure 2 from Barnes, Callaghan &amp; Wickert (2021), CC-BY 4.0.</small>
+
+<p>
+<img src="esurf-8-431-2020-f01.png" alt="Forest of binary trees schematic showing depression hierarchy with numbered nodes, parent-child links, geolinks, and ocean links" style="max-width:100%">
+<br>
+<small>A forest of binary trees representing the depression hierarchy of a landscape.
+Solid lines connect parent meta-depressions to their two child depressions; dashed
+arrows show geolinks (overflow connections between adjacent depressions) and ocean
+links. Each numbered node corresponds to a leaf or meta depression label stored in
+<b>output_labels</b> and <b>output_hierarchy</b>.
+Figure 1 from Barnes, Callaghan &amp; Wickert (2020), CC-BY 4.0.</small>
+
 <h3>Output rasters</h3>
 
 <b>output_labels</b> assigns each cell its leaf-depression label—an integer
@@ -133,6 +151,15 @@ include:
 direct ocean connection. Some depressions drain to the ocean through multiple
 independent pathways; this table records each (dep_label, linked_label) pair.
 Columns: <em>cat</em>, <em>dep_label</em>, <em>linked_label</em>.
+
+<p>
+<img src="esurf-8-431-2020-f09.png" alt="Three-panel figure showing depression labels on a Madagascar DEM: (a) leaf-level labels, (b) top-level labels, (c) filtered labels above area threshold" style="max-width:100%">
+<br>
+<small>Example <b>output_labels</b> outputs for a DEM of northern Madagascar.
+(a) Leaf-depression labels: each distinct color is a separate leaf depression.
+(b) Top-level (root) depression labels: only the largest containing hierarchy level is shown.
+(c) Filtered labels retaining only depressions above a minimum area threshold.
+Figure 9 from Barnes, Callaghan &amp; Wickert (2020), CC-BY 4.0.</small>
 
 <h2>NOTES</h2>
 

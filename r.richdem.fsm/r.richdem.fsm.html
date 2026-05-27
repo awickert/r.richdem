@@ -98,6 +98,16 @@ The algorithm operates in three stages:
       water-table depth.</li>
 </ol>
 
+<p>
+<img src="esurf-9-105-2021-f04.png" alt="Ten-panel overview of the three Fill-Spill-Merge stages: move water downhill to pits (a-b), overflow and merge depressions (c-f), flood the landscape (g-j)" style="max-width:100%">
+<br>
+<small>The three stages of the Fill&ndash;Spill&ndash;Merge algorithm illustrated on a synthetic
+landscape. (a&ndash;b)&nbsp;Downslope routing moves surface water to pit cells.
+(c&ndash;f)&nbsp;Hierarchy traversal: depressions fill, overflow at pour points, and merge
+into meta-depressions. (g&ndash;j)&nbsp;Water surface mapping back-calculates the equilibrium
+water-table depth in each depression from the accumulated volume.
+Figure 4 from Barnes, Callaghan &amp; Wickert (2021), CC-BY 4.0.</small>
+
 <h3>Water table depth convention</h3>
 
 The <b>water_depth</b> and <b>output</b> maps use a signed depth convention:
