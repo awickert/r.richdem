@@ -5,6 +5,8 @@
 # % keyword: vector
 # % keyword: hydrology
 # % keyword: fill-spill-merge
+# % keyword: depression
+# % keyword: water table
 # %end
 # %option G_OPT_R_INPUT
 # % key: input

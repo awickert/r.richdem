@@ -1,0 +1,79 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "r.richdem: GRASS GIS add-on collection wrapping the RichDEM terrain-analysis library"
+abstract: >
+  A collection of seven GRASS GIS modules that expose the RichDEM Python
+  bindings for depression filling, depression breaching, flat resolution,
+  flow accumulation, terrain attributes, depression-hierarchy construction,
+  and Fill-Spill-Merge surface-water routing.
+authors:
+  - family-names: "Wickert"
+    given-names: "Andrew D."
+    orcid: "https://orcid.org/0000-0002-9545-3365"
+contributors:
+  - name: "Claude Sonnet 4.6 (Anthropic)"
+    alias: "claude-sonnet-4-6"
+    role: "software"
+    notes: >
+      AI assistant used to develop the GRASS GIS bindings, module code,
+      shared library, and HTML documentation. Listed as contributor per
+      emerging convention for AI-assisted software development; the AI
+      system holds no copyright.
+url: "https://github.com/awickert/r.richdem"
+license: GPL-3.0
+keywords:
+  - GRASS GIS
+  - RichDEM
+  - terrain analysis
+  - hydrology
+  - depression hierarchy
+  - fill-spill-merge
+  - flow accumulation
+  - digital elevation model
+references:
+  - type: article
+    title: >
+      Computing water flow through complex landscapes – Part 3:
+      Fill–Spill–Merge: flow routing in depression hierarchies
+    authors:
+      - family-names: "Barnes"
+        given-names: "Richard"
+      - family-names: "Callaghan"
+        given-names: "Kerry L."
+      - family-names: "Wickert"
+        given-names: "Andrew D."
+        orcid: "https://orcid.org/0000-0002-9545-3365"
+    journal: "Earth Surface Dynamics"
+    volume: 9
+    issue: 1
+    start: 105
+    end: 121
+    year: 2021
+    doi: 10.5194/esurf-9-105-2021
+  - type: article
+    title: >
+      Computing water flow through complex landscapes – Part 2:
+      Finding hierarchies in depressions and morphological segmentations
+    authors:
+      - family-names: "Barnes"
+        given-names: "Richard"
+      - family-names: "Callaghan"
+        given-names: "Kerry L."
+      - family-names: "Wickert"
+        given-names: "Andrew D."
+        orcid: "https://orcid.org/0000-0002-9545-3365"
+    journal: "Earth Surface Dynamics"
+    volume: 8
+    issue: 2
+    start: 431
+    end: 445
+    year: 2020
+    doi: 10.5194/esurf-8-431-2020
+  - type: software
+    title: "RichDEM: Terrain Analysis Software"
+    authors:
+      - family-names: "Barnes"
+        given-names: "Richard"
+    year: 2016
+    url: "http://github.com/r-barnes/richdem"

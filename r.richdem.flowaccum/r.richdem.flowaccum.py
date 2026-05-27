@@ -4,6 +4,7 @@
 # % keyword: raster
 # % keyword: hydrology
 # % keyword: flow accumulation
+# % keyword: flow direction
 # %end
 # %option G_OPT_R_INPUT
 # % key: input

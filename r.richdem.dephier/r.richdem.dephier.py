@@ -5,6 +5,7 @@
 # % keyword: vector
 # % keyword: hydrology
 # % keyword: depression hierarchy
+# % keyword: flow direction
 # %end
 # %option G_OPT_R_INPUT
 # % key: input
