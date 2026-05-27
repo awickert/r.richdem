@@ -6,7 +6,6 @@ import sqlite3
 import grass.script as gs
 from grass.pygrass.vector import VectorTopo
 from grass.pygrass.vector.geometry import Point
-from richdem.depression_hierarchy import Depression, OCEAN
 
 # std::numeric_limits<uint32_t>::max() — used as NO_VALUE / NO_PARENT sentinel
 _NO_VALUE = 2**32 - 1
@@ -62,6 +61,7 @@ def depressions_to_grass(deps, labels, flowdirs, map_name, overwrite=False):
       - Metadepressions: point at out_cell (the saddle between child depressions).
     Layer 2 (ocean_links table): one row per ocean_linked entry.
     """
+    from _richdem.depression_hierarchy import OCEAN
     from librichdem.raster import rdarray_to_grass
 
     OCEAN_val = int(OCEAN)
@@ -79,20 +79,12 @@ def depressions_to_grass(deps, labels, flowdirs, map_name, overwrite=False):
     )
     gs.run_command("g.remove", type="raster", name=tmp, flags="f", quiet=True)
 
-    # --- Step 2: metadepression points at out_cell ---
-    # cat is set to dep_label so we can INSERT matching rows by cat later.
-    with VectorTopo(map_name, mode="rw") as vmap:
-        for dep in deps:
-            if int(dep.lchild) != _NO_VALUE:
-                x, y = _flat_to_xy(dep.out_cell, region)
-                vmap.write(Point(x, y), cat=dep.dep_label, layer=1)
-
-    # --- Step 3: add schema columns ---
+    # --- Step 2: add schema columns ---
     gs.run_command(
         "v.db.addcolumn", map=map_name, columns=_SCHEMA_COLS, quiet=True,
     )
 
-    # --- Step 4: populate attribute table ---
+    # --- Step 3: populate attribute table ---
     db_info = gs.vector_db(map=map_name)
     db_path = db_info[1]["database"]
     tbl = db_info[1]["table"]
@@ -100,25 +92,37 @@ def depressions_to_grass(deps, labels, flowdirs, map_name, overwrite=False):
     cur = conn.cursor()
 
     set_clause = ", ".join(f"{c}=?" for c in _DATA_COLS)
+
+    # Update leaf rows (already created by r.to.vect, keyed by dep_label column).
+    for dep in deps:
+        if dep.dep_label == OCEAN_val or int(dep.lchild) != _NO_VALUE:
+            continue
+        cur.execute(
+            f"UPDATE {tbl} SET {set_clause} WHERE dep_label=?",
+            _dep_row(dep) + (dep.dep_label,),
+        )
+
+    # Determine the next free cat so metadepression rows don't collide with
+    # the sequential cats that r.to.vect assigned to leaf areas.
+    cur.execute(f"SELECT MAX(cat) FROM {tbl}")
+    next_cat = (cur.fetchone()[0] or 0) + 1
+
+    # Assign a stable cat to each metadepression and write the point geometry.
+    meta_deps = [d for d in deps if d.dep_label != OCEAN_val and int(d.lchild) != _NO_VALUE]
+    meta_cat = {dep.dep_label: next_cat + i for i, dep in enumerate(meta_deps)}
+
+    with VectorTopo(map_name, mode="rw") as vmap:
+        for dep in meta_deps:
+            x, y = _flat_to_xy(dep.out_cell, region)
+            vmap.write(Point(x, y), cat=meta_cat[dep.dep_label])
+
     insert_cols = f"cat, dep_label, {', '.join(_DATA_COLS)}"
     insert_placeholders = ", ".join(["?"] * (2 + len(_DATA_COLS)))
-
-    for dep in deps:
-        if dep.dep_label == OCEAN_val:
-            continue
-        row = _dep_row(dep)
-        if int(dep.lchild) == _NO_VALUE:
-            # Leaf: row exists from r.to.vect, update by dep_label
-            cur.execute(
-                f"UPDATE {tbl} SET {set_clause} WHERE dep_label=?",
-                row + (dep.dep_label,),
-            )
-        else:
-            # Meta: row must be inserted; cat matches what VectorTopo wrote
-            cur.execute(
-                f"INSERT INTO {tbl} ({insert_cols}) VALUES ({insert_placeholders})",
-                (dep.dep_label, dep.dep_label) + row,
-            )
+    for dep in meta_deps:
+        cur.execute(
+            f"INSERT INTO {tbl} ({insert_cols}) VALUES ({insert_placeholders})",
+            (meta_cat[dep.dep_label], dep.dep_label) + _dep_row(dep),
+        )
 
     # --- Step 5: ocean_links junction table as layer 2 ---
     cur.execute(
@@ -154,6 +158,7 @@ def depressions_from_grass(map_name):
                geolink, pit_elev, out_elev, ocean_parent, cell_count,
                dep_vol, water_vol, total_elevation
         FROM {tbl}
+        GROUP BY dep_label
         ORDER BY dep_label
     """)
     rows = cur.fetchall()
@@ -173,6 +178,8 @@ def depressions_from_grass(map_name):
     def restore_float(val):
         """NULL in SQLite means infinity for unset elevation fields."""
         return float("inf") if val is None else float(val)
+
+    from _richdem.depression_hierarchy import Depression
 
     deps = []
     for row in rows:
