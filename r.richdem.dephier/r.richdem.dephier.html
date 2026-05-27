@@ -114,7 +114,8 @@ the ocean receive label 0 (OCEAN).
 <p>
 <b>output_flowdirs</b> contains a D8 flow direction for each cell. Directions
 are encoded as integers 0–7 counting counter-clockwise from east (matching the
-RichDEM convention); pit cells have no outflow direction.
+RichDEM convention). Pit cells, which have no outflow direction, are stored
+with value 8.
 
 <h3>Output vector map (two-layer)</h3>
 
