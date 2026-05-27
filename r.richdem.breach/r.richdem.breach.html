@@ -1,0 +1,145 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<meta name="Author" content="GRASS Development Team">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>r.richdem.breach - GRASS GIS manual</title>
+<meta name="description" content="r.richdem.breach: Breach depressions in a DEM using RichDEM.">
+<link rel="stylesheet" href="grassdocs.css" type="text/css">
+</head>
+<body bgcolor="white">
+<div id="container">
+
+<a href="index.html"><img src="grass_logo.png" alt="GRASS logo"></a>
+<hr class="header">
+
+<h2>NAME</h2>
+<em><b>r.richdem.breach</b></em> - Breach depressions in a DEM using RichDEM.
+
+<h2>KEYWORDS</h2>
+<a href="raster.html">raster</a>,
+<a href="topic_hydrology.html">hydrology</a>,
+<a href="keywords.html#depression breaching">depression breaching</a>
+
+<h2>SYNOPSIS</h2>
+<div id="name"><b>r.richdem.breach</b><br></div>
+<b>r.richdem.breach --help</b><br>
+<div id="synopsis">
+<b>r.richdem.breach</b>
+<b>input</b>=<em>name</em>
+<b>output</b>=<em>name</em>
+[<b>topology</b>=<em>string</em>]
+[--<b>overwrite</b>]
+[--<b>help</b>]
+[--<b>verbose</b>]
+[--<b>quiet</b>]
+</div>
+
+<div id="parameters">
+<h3>Parameters:</h3>
+<dl>
+<dt><b>input</b>=<em>name</em>&nbsp;<b>[required]</b></dt>
+<dd>Input elevation raster</dd>
+
+<dt><b>output</b>=<em>name</em>&nbsp;<b>[required]</b></dt>
+<dd>Output depression-breached elevation raster</dd>
+
+<dt><b>topology</b>=<em>string</em></dt>
+<dd>Flow topology</dd>
+<dd>Options: <em>D8, D4</em></dd>
+<dd>Default: <em>D8</em></dd>
+</dl>
+</div>
+
+<h2>DESCRIPTION</h2>
+
+<em><b>r.richdem.breach</b></em> removes topographic depressions from a digital
+elevation model (DEM) by carving a channel from each pit cell to the nearest
+outlet at the lowest possible elevation. Unlike depression filling, which raises
+pit cells to the pour-point elevation, breaching lowers the channel cells along
+the shortest path from the pit to a drainage outlet, thereby preserving the
+surrounding terrain.
+
+<p>
+Breaching is often preferable to filling when:
+<ul>
+  <li>Depressions are small relative to surrounding terrain (narrow channels are
+      more realistic than broad flat-bottomed basins).</li>
+  <li>Preserving the original elevation of non-channel cells is important for
+      subsequent terrain analysis.</li>
+  <li>Filling would create large artificial flats that complicate flow-direction
+      assignment.</li>
+</ul>
+
+<p>
+Two flow topologies are supported:
+<ul>
+  <li><b>D8</b> (default) — channel paths connect cells through any of the 8
+      neighbors.</li>
+  <li><b>D4</b> — channel paths connect cells through the 4 cardinal
+      neighbors only.</li>
+</ul>
+
+<h2>NOTES</h2>
+
+Breaching and filling are complementary approaches to hydrological conditioning.
+For many real-world landscapes both types of depressions exist: some depressions
+are artifacts that should be removed (filled or breached), while others are
+genuine features such as lakes and wetlands. To model water redistribution
+through real depressions rather than removing them, use
+<em><a href="r.richdem.dephier.html">r.richdem.dephier</a></em> together with
+<em><a href="r.richdem.fsm.html">r.richdem.fsm</a></em>.
+
+<p>
+After breaching, flat areas may remain at the carved channel elevations.
+<em><a href="r.richdem.resolveflats.html">r.richdem.resolveflats</a></em> can
+impose a small drainage gradient on any remaining flat areas.
+
+<h2>EXAMPLES</h2>
+
+Breach depressions using D8 topology:
+<div class="code"><pre>
+r.richdem.breach input=dem output=dem_breached
+</pre></div>
+
+Breach using D4 topology (cardinal neighbors only):
+<div class="code"><pre>
+r.richdem.breach input=dem output=dem_breached_d4 topology=D4
+</pre></div>
+
+Compare filling versus breaching on the same DEM:
+<div class="code"><pre>
+r.richdem.fill input=dem output=dem_filled
+r.richdem.breach input=dem output=dem_breached
+r.mapcalc "diff = dem_filled - dem_breached"
+</pre></div>
+
+<h2>SEE ALSO</h2>
+
+<em>
+<a href="r.richdem.fill.html">r.richdem.fill</a>,
+<a href="r.richdem.resolveflats.html">r.richdem.resolveflats</a>,
+<a href="r.richdem.flowaccum.html">r.richdem.flowaccum</a>,
+<a href="r.richdem.dephier.html">r.richdem.dephier</a>,
+<a href="r.fill.dir.html">r.fill.dir</a>,
+<a href="r.watershed.html">r.watershed</a>
+</em>
+
+<h2>AUTHORS</h2>
+
+Andrew D. Wickert (GRASS interface),
+Richard Barnes (RichDEM library)
+
+<hr class="header">
+<p>
+<a href="index.html">Main index</a> |
+<a href="raster.html">Raster index</a> |
+<a href="topics.html">Topics index</a> |
+<a href="keywords.html">Keywords index</a> |
+<a href="full_index.html">Full index</a>
+</p>
+
+</div>
+</body>
+</html>
