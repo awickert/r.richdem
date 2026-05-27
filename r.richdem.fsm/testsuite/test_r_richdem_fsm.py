@@ -17,10 +17,10 @@ Two water scenarios are tested:
   Dry   wtd = −1 everywhere (no ponded water)
   Wet   wtd = +1.5 in depression cells, −1 elsewhere
 
-Note: a single border cell in the FSM output carries an IEEE NaN value
-(a known artefact of the rdarray_to_grass conversion for edge cells).
-Tests use `r.univar` min and mean, which are unaffected by NaN for the
-scenarios tested here, rather than max or range.
+Note: when the maximum value in a DCELL raster is exactly 0.0, GRASS
+r.univar reports max=nan and range=nan even though no null or NaN cells
+are present (reproducible with a plain r.mapcalc raster of the same
+pattern).  Tests therefore use r.univar min and mean rather than max.
 """
 
 import unittest

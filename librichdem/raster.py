@@ -31,8 +31,12 @@ def rdarray_from_grass(name):
 def rdarray_to_grass(rda, name, overwrite=False):
     """Write a RichDEM rdarray to a GRASS raster map."""
     data = np.array(rda, dtype="float64")
-    # Restore null cells: no_data values become GRASS nulls (NaN for DCELL)
-    data[data == rda.no_data] = np.nan
+    # Convert no_data sentinel and any algorithm-produced NaN to GRASS null.
+    # NaN == NaN is False in IEEE 754, so a plain == rda.no_data check would
+    # silently pass through NaN values produced by C++ edge cases; the
+    # explicit | np.isnan(data) guard catches those and normalises them to
+    # Python's canonical quiet NaN, which PyGRASS writes as GRASS DCELL null.
+    data[(data == rda.no_data) | np.isnan(data)] = np.nan
 
     w = RasterRow(name)
     w.open("w", mtype="DCELL", overwrite=overwrite)
