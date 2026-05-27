@@ -1,6 +1,6 @@
 MODULE_TOPDIR = ../../..
 
-PGM = r.richdem.breach
+PGM = r.richdem.filldepressions
 
 include $(MODULE_TOPDIR)/include/Make/Script.make
 

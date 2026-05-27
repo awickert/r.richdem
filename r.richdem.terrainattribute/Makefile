@@ -1,6 +1,6 @@
 MODULE_TOPDIR = ../../..
 
-PGM = r.richdem.flowaccum
+PGM = r.richdem.terrainattribute
 
 include $(MODULE_TOPDIR)/include/Make/Script.make
 
