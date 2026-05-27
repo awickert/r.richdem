@@ -36,6 +36,9 @@ def rdarray_to_grass(rda, name, overwrite=False):
     # silently pass through NaN values produced by C++ edge cases; the
     # explicit | np.isnan(data) guard catches those and normalises them to
     # Python's canonical quiet NaN, which PyGRASS writes as GRASS DCELL null.
+    # (r.univar misreports max=nan on GRASS <= 8.3.2 when the true maximum is
+    # exactly 0.0 — a separate upstream bug fixed in OSGeo/grass PR #3512,
+    # included in GRASS 8.4.0.)
     data[(data == rda.no_data) | np.isnan(data)] = np.nan
 
     w = RasterRow(name)
